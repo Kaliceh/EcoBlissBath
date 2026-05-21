@@ -18,23 +18,22 @@ describe("API tests", () => {
         });
     });
 
-    it("commands without a connection should return 401 or 403", () => {
+    it("should deny access to cart when user is not authenticated", () => {
         cy.request({
             method: 'GET',
             url: `${apiURL}/orders`,
             failOnStatusCode: false
         }).then((response) => {
-            expect([401, 403]).to.include(response.status);
+            expect(response.status).to.eq(403);
         });
     });
-
+    // Anomalie : l'API retourne 401 au lieu de 403, déjà vu avec Marie
 
     it("must return the list of products", () => {
 
         cy.request({
             method: "GET",
             url: `${apiURL}/orders`,
-            failOnStatusCode: false,
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -47,7 +46,7 @@ describe("API tests", () => {
     });
 
 
-    it("the product details page must be returned; the product ID must be specified in the URL", () => {
+    it("should return the product specifications and the good product ID must be specified in the URL", () => {
 
         const id = 5;
 
@@ -56,13 +55,19 @@ describe("API tests", () => {
             url: `${apiURL}/products/${id}`,
         }).then((response) => {
             expect(response.status).to.eq(200);
-
             expect(response.body).to.have.property("id", id);
-
-            expect(response.body).to.have.property("name");
-            expect(response.body).to.have.property("price");
-            expect(response.body).to.have.property("availableStock");
-
+            expect(response.body).to.include.all.keys([
+                "id",
+                "name",
+                "availableStock",
+                "skin",
+                "aromas",
+                "ingredients",
+                "description",
+                "price",
+                "picture",
+                "varieties",
+            ]);
         });
     });
 
@@ -129,9 +134,11 @@ describe("API tests", () => {
                 quantity: 1
             }
         }).then((response) => {
-            expect(response.status).not.to.oneOf([400, 409]);
+            expect(response.status).to.eq(400);
         });
     });
+
+    // Anomalie : Renvoi un code 200 au lieu de 400
 
     it("add a review", () => {
 

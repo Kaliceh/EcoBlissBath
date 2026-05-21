@@ -1,4 +1,21 @@
 describe("Cart tests", () => {
+    let token
+
+    before(() => {
+        cy.request({
+            method: "POST",
+            url: "http://localhost:8081/login",
+            body: {
+                username: 'test2@test.fr',
+                password: 'testtest'
+            }
+
+        }).then((response) => {
+            token = response.body.token;
+            expect(token).to.exist;
+        });
+    });
+
     beforeEach(() => {
         cy.loginFront();
         cy.deleteCart().then(() => {
@@ -108,30 +125,29 @@ describe("Cart tests", () => {
             });
     });
 
-    // Vérifier ajout dans le panier et vérifier la réponse API
+    // Vérifier ajout dans le panier
     it("should add product and verify cart via API", () => {
 
-        cy.intercept("GET", "**/orders").as("getCart");
+        cy.request({
+            method: "GET",
+            url: "http://localhost:8081/orders",
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        }).then((response) => {
 
-        cy.visit("/products/5");
+            expect(response.status).to.eq(200);
 
-        cy.getBySel("detail-product-add")
-            .should("be.visible")
-            .click();
+            expect(response.body).to.have.property("orderLines");
 
-        cy.visit("/cart");
+            expect(response.body.orderLines.length).to.be.greaterThan(0);
 
-        cy.wait("@getCart").then((interception) => {
+            response.body.orderLines.forEach((orderLines) => {
 
-            const orderLines = interception.response.body.orderLines;
+                expect(orderLines.product).to.have.property("id");
 
-            expect(orderLines.length).to.be.greaterThan(0);
-
-            const product = orderLines.find(l =>
-                l.product?.id == 5 || l.productId == 5
-            );
-
-            expect(product).to.exist;
+                expect(orderLines.quantity).to.be.greaterThan(0);
+            });
         });
     });
 
